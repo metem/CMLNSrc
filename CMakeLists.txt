@@ -9,7 +9,7 @@ SET(PROJECT_SOURCE_DIR "${gstcmlnsrc_SOURCE_DIR}/src")
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 find_package(PkgConfig)
-pkg_check_modules(PKG REQUIRED glibmm-2.4 gstreamermm-1.0)
+pkg_check_modules(PKG REQUIRED glibmm-2.4 gstreamermm-1.0 libdc1394-2)
 include_directories(${PKG_INCLUDE_DIRS})
 link_directories(${PKG_LIBRARY_DIRS})
 
@@ -17,3 +17,4 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
 add_subdirectory(src)
+add_subdirectory(tools)
