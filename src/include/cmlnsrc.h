@@ -9,20 +9,28 @@
 #define CMLNSRC_H_
 
 #include <gstreamermm.h>
-#include <gstreamermm/private/element_p.h>
+#include <gstreamermm/appsink.h>
+#include <gstreamermm/private/pushsrc_p.h>
 
 #include "config.h"
+#include "grabber.h"
 
-class CMLNSrc: public Gst::Element
+class CMLNSrc: public Gst::BaseSrc
 {
 private:
-	Glib::RefPtr<Gst::Pad> srcpad;
+	Grabber::Cmln grabber;
 
 public:
 	static void base_init(Gst::ElementClass<CMLNSrc> *klass);
 	static bool register_cmlnsrc(Glib::RefPtr<Gst::Plugin> plugin);
 
-	explicit CMLNSrc(GstElement *gobj);
+	Gst::FlowReturn create_vfunc(guint64 offset, guint size,
+			Glib::RefPtr<Gst::Buffer>& buffer);
+	bool negotiate_vfunc();
+	bool start_vfunc();
+	bool stop_vfunc();
+
+	explicit CMLNSrc(GstBaseSrc *gobj);
 };
 
 #endif /* CMLNSRC_H_ */
