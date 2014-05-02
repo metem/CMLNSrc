@@ -9,48 +9,47 @@
 
 void CMLNSrc::base_init(Gst::ElementClass<CMLNSrc> *klass)
 {
-	//TODO add gstreamer properties
-
-	Glib::RefPtr<Gst::Caps> caps = Gst::Caps::create_simple("video/x-raw");
-	caps->set_simple("format", "RGB");
-	caps->set_simple("width", 1280);
-	caps->set_simple("height", 960);
-	caps->set_simple("bpp", 8);
-	caps->set_simple("depth", 8);
-	caps->set_simple("framerate", Gst::Fraction(30, 1));
-
 	klass->set_metadata(LNAME, KLASS, DESCRIPTION, AUTHOR);
 
 	klass->add_pad_template(
 			Gst::PadTemplate::create("src", Gst::PAD_SRC, Gst::PAD_ALWAYS,
-					caps));
+					Gst::Caps::create_any()));
 }
 
 CMLNSrc::CMLNSrc(GstBaseSrc *gobj) :
-		Gst::BaseSrc(gobj)
+		Gst::BaseSrc(gobj), vmode(*this, "vmode", 0), iso_speed(*this,
+				"iso-speed", 400)
 {
-	set_format(Gst::FORMAT_TIME);
-	set_live(true);
-
-	//TODO change to gstreamer debug/error messages
-
 	if (!grabber.initialize())
 		throw std::runtime_error("Failed to initialize video grabber");
 
-	if (!grabber.setIsoSpeed(Grabber::grabber_speed::DC1394_ISO_SPEED_400))
-		throw std::runtime_error("Failed to set ISO speed");
+	set_format(Gst::FORMAT_TIME);
+	set_live(true);
+}
 
-	if (!grabber.setVideoMode(
-			Grabber::grabber_videomode::DC1394_VIDEO_MODE_FORMAT7_0))
-		throw std::runtime_error("Failed to set video mode");
+bool CMLNSrc::set_caps_vfunc(const Glib::RefPtr<Gst::Caps>& caps)
+{
+	Gst::Fraction framerate;
 
-	if (!grabber.setFrameRate(Grabber::grabber_framerate::DC1394_FRAMERATE_30))
-		throw std::runtime_error("Failed to set framerate");
+	Gst::Structure allowed_caps = caps->get_structure(0);
+	allowed_caps.get_field("framerate", framerate);
+	switch (framerate.num)
+	{
+	case 30:
+		if (!grabber.setFrameRate(
+				Grabber::grabber_framerate::DC1394_FRAMERATE_30))
+			throw std::runtime_error("Failed to set framerate");
+		break;
+	case 15:
+		if (!grabber.setFrameRate(
+				Grabber::grabber_framerate::DC1394_FRAMERATE_15))
+			throw std::runtime_error("Failed to set framerate");
+		break;
+	default:
+		return false;
+	}
 
-	if (!grabber.setup())
-		throw std::runtime_error("Failed to setup the capture");
-
-	set_blocksize(grabber.getFrameBytes());
+	return true;
 }
 
 Gst::FlowReturn CMLNSrc::create_vfunc(guint64 offset, guint size,
@@ -70,13 +69,78 @@ Gst::FlowReturn CMLNSrc::create_vfunc(guint64 offset, guint size,
 
 bool CMLNSrc::negotiate_vfunc()
 {
-	return true;
+	return set_caps_vfunc(get_src_pad()->get_allowed_caps());
 }
 
 bool CMLNSrc::start_vfunc()
 {
-	grabber.setTransmision(true);
-	return true;
+	bool result;
+	switch (iso_speed)
+	{
+	case 100:
+		result = grabber.setIsoSpeed(
+				Grabber::grabber_speed::DC1394_ISO_SPEED_100);
+		break;
+	case 200:
+		result = grabber.setIsoSpeed(
+				Grabber::grabber_speed::DC1394_ISO_SPEED_200);
+		break;
+	case 400:
+		result = grabber.setIsoSpeed(
+				Grabber::grabber_speed::DC1394_ISO_SPEED_400);
+		break;
+	default:
+		throw std::runtime_error("\nSupported ISO speeds:\n100\n200\n400");
+	}
+
+	if (!result)
+		throw std::runtime_error("Failed to set ISO speed");
+
+	switch (vmode)
+	{
+	case 0:
+		result = grabber.setVideoMode(
+				Grabber::grabber_videomode::DC1394_VIDEO_MODE_640x480_MONO8);
+		break;
+	case 1:
+		result = grabber.setVideoMode(
+				Grabber::grabber_videomode::DC1394_VIDEO_MODE_640x480_MONO16);
+		break;
+	case 2:
+		result = grabber.setVideoMode(
+				Grabber::grabber_videomode::DC1394_VIDEO_MODE_1280x960_MONO8);
+		break;
+	case 3:
+		result = grabber.setVideoMode(
+				Grabber::grabber_videomode::DC1394_VIDEO_MODE_1280x960_MONO16);
+		break;
+	case 4:
+		result = grabber.setVideoMode(
+				Grabber::grabber_videomode::DC1394_VIDEO_MODE_FORMAT7_0);
+		break;
+	case 5:
+		result = grabber.setVideoMode(
+				Grabber::grabber_videomode::DC1394_VIDEO_MODE_FORMAT7_1);
+		break;
+	case 6:
+		result = grabber.setVideoMode(
+				Grabber::grabber_videomode::DC1394_VIDEO_MODE_FORMAT7_2);
+		break;
+	default:
+		throw std::runtime_error("\nSupported video modes:\n0 - 640x480_MONO8\n"
+				"1 - 640x480_MONO16\n2 - 1280x960_MONO8\n3 - 1280x960_MONO16\n"
+				"4 - FORMAT7_0\n5 - FORMAT7_1\n6 - FORMAT7_2");
+	}
+
+	if (!result)
+		throw std::runtime_error("Failed to set video mode");
+
+	if (!grabber.setup())
+		throw std::runtime_error("Failed to setup the capture");
+
+	set_blocksize(grabber.getFrameBytes());
+
+	return grabber.setTransmision(true);
 }
 
 bool CMLNSrc::stop_vfunc()

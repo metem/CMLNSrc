@@ -8,6 +8,7 @@
 #ifndef CMLNGRABBER_H_
 #define CMLNGRABBER_H_
 
+#include <string.h>
 #include <dc1394/dc1394.h>
 
 namespace Grabber

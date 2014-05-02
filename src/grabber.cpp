@@ -39,19 +39,19 @@ bool Cmln::setIsoSpeed(grabber_speed iso_speed)
 
 bool Cmln::setVideoMode(grabber_videomode video_mode)
 {
-	if (dc1394_video_set_mode(camera, video_mode) == DC1394_SUCCESS)
+	if (dc1394_video_set_mode(camera, (dc1394video_mode_t)video_mode) == DC1394_SUCCESS)
 	{
 		this->video_mode = video_mode;
 		if (dc1394_get_image_size_from_video_mode(camera, video_mode, &width,
 				&height) == DC1394_SUCCESS)
 		{
-			if (video_mode == grabber_videomode::DC1394_VIDEO_MODE_FORMAT7_0)
+			if (video_mode >= grabber_videomode::DC1394_VIDEO_MODE_FORMAT7_0)
 			{
 				color_coding = dc1394color_coding_t::DC1394_COLOR_CODING_RGB8;
 				return true;
 			}
 
-			if (dc1394_get_color_coding_from_video_mode(camera, video_mode,
+			if (dc1394_get_color_coding_from_video_mode(camera, (dc1394video_mode_t)video_mode,
 					&color_coding) == DC1394_SUCCESS)
 				return true;
 		}
@@ -101,12 +101,16 @@ bool Cmln::getFrame(unsigned char* buffer)
 			DC1394_CAPTURE_POLICY_WAIT, &frame);
 	if ((error == DC1394_SUCCESS) && frame)
 	{
-		if (video_mode == grabber_videomode::DC1394_VIDEO_MODE_FORMAT7_0)
+		if (video_mode >= grabber_videomode::DC1394_VIDEO_MODE_FORMAT7_0)
 		{
 			dc1394_bayer_decoding_8bit(frame->image, buffer, frame->size[0],
 					frame->size[1],
 					dc1394color_filter_t::DC1394_COLOR_FILTER_GBRG,
 					dc1394bayer_method_t::DC1394_BAYER_METHOD_NEAREST);
+		}
+		else
+		{
+			memcpy(buffer, frame->image, getFrameBytes());
 		}
 		dc1394_capture_enqueue(camera, frame);
 		return true;
@@ -120,6 +124,8 @@ uint32_t Cmln::getFrameBytes()
 	{
 	case grabber_colorcoding::DC1394_COLOR_CODING_RGB8:
 		return getFrameWidth() * getFrameHeight() * 3;
+	case grabber_colorcoding::DC1394_COLOR_CODING_MONO8:
+		return getFrameWidth() * getFrameHeight();
 	default:
 		return 0;
 	}
