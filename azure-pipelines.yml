@@ -13,7 +13,7 @@ pool:
 steps:
 - task: CmdLine@2
   inputs:
-    script: sudo apt-get install libgtkglextmm-x11-1.2-dev
+    script: sudo apt-get install libgtkglextmm-x11-1.2 libgstreamermm-1.0-1 libdc1394-22
 
 - task: CMake@1
   inputs:
