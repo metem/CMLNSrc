@@ -11,6 +11,10 @@ pool:
   vmImage: 'Ubuntu-16.04'
 
 steps:
+- task: CmdLine@2
+  inputs:
+    script: sudo apt-get install libgtkglextmm-x11-1.2-dev
+
 - task: CMake@1
   inputs:
     cmakeArgs: $(Build.SourcesDirectory)
