@@ -18,3 +18,14 @@ steps:
 - task: CMake@1
   inputs:
     cmakeArgs: $(Build.SourcesDirectory)
+
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(Build.ArtifactStagingDirectory)'
+  inputs:
+    Contents: $(Build.SourcesDirectory)\build\*
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: $(Build.ArtifactStagingDirectory)
+    artifactName: LinearOrdering
