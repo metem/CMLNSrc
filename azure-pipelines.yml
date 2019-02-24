@@ -17,7 +17,7 @@ steps:
 
 - task: CMake@1
   inputs:
-    cmakeArgs: $(Build.SourcesDirectory)
+    cmakeArgs: --build $(Build.SourcesDirectory) --config "Release"
 
 - task: CopyFiles@2
   displayName: 'Copy Files to: $(Build.ArtifactStagingDirectory)'
